@@ -34,7 +34,7 @@ sub is-valid-type($node, $parent) {
     return unless $node ~~ Pod::FormattingCode;
 
     # Does this match a type?
-    my $type = $node.contents.join('');
+    my $type = $node.contents.join('').subst('::','/', :g);
     return unless "doc/Type/$type.rakudoc".IO.f;
 
     if $node.type ne 'C' {
