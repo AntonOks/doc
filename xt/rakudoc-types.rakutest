@@ -10,9 +10,6 @@ Any other formatting code that refers to a type will fail the test; any C<>
 that isn't inside of an L<> will fail, and any L<> that doesn't have a C<>
 will fail.
 
-Note - correctly formed entries will not be reported as passing subtests - only
-items that fail are reported.
-
 =end overview
 
 use Test;
