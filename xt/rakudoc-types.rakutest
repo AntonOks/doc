@@ -26,6 +26,17 @@ if @files {
     plan :skip-all<No rakudoc files specified>
 }
 
+sub render-node($node) {
+    my $type = $node.contents.join('');
+    my $result = $node.type ~ '<' ~ $type;
+    if $node.type eq 'L' {
+        $result ~= '|' ~ $node.meta
+    }
+    $result ~= '>';
+    
+    $result;
+}
+
 sub is-valid-type($node, $parent) {
     # only care about I<>, C<>, L<>, etc.
     return unless $node ~~ Pod::FormattingCode;
@@ -34,25 +45,29 @@ sub is-valid-type($node, $parent) {
     my $type = $node.contents.join('').subst('::','/', :g);
     return unless "doc/Type/$type.rakudoc".IO.f;
 
+    # Might be nested but we only report on the innermost here.
     if $node.type ne 'C' {
-        flunk $node.type ~ '<' ~ $type ~ "> should be L<C<$type>|/type/$type>";
+        flunk "{render-node($node)} should be L<C<$type>|/type/$type>";
         return;
     }
 
+    # Probably in a paragraph
     if $parent === Nil or ! ($parent ~~  Pod::FormattingCode) {
-        flunk $node.type ~ '<' ~ $type ~ "> should be L<C<$type>|/type/$type> - bad parent class: {$parent.^name}";
+        flunk "{render-node($node)} should be L<C<$type>|/type/$type>";
         return;
     }
 
+    # Wrapped, but not in an L<>
     if $parent.type ne 'L' {
-        flunk $parent.type ~ '<C<' ~ $type ~ ">> should be L<C<$type>|/type/$type> - bad parent FormattingCode";
+        flunk "$parent.type<{render-node($node)}> should be L<C<$type>|/type/$type> - bad parent FormattingCode";
         return;
     } elsif $parent.meta ne "/type/$type" {
-        flunk 'L<C<' ~ $type ~ '|' ~ $parent.meta~ ">> should be L<C<$type>|/type/$type> - bad link";
+        # Wrapped in an L<> but wrong URL
+        flunk "L<{render-node($node)}|$parent.meta> should be L<C<$type>|/type/$type> - bad link";
     } else {
+        # \o/
         pass "$type reference correctly formatted.";
     }
-
 }
 
 sub walk-content($item, $parent) {
@@ -64,6 +79,7 @@ sub walk-content($item, $parent) {
     }
 }
 
+# Walk through pod on each file.
 for @files -> $file {
     my @chunks = extract-pod($file).contents;
 
